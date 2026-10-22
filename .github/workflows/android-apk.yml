@@ -1,0 +1,47 @@
+name: Android APK Olustur
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu indir
+        uses: actions/checkout@v4
+      - name: Java hazirla
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Flutter hazirla
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Android proje dosyalarini olustur
+        run: flutter create . --platforms=android --org=com.sohbetkutusu
+      - name: Telefonda gorunecek adi ayarla
+        run: |
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          import re
+          path = Path('android/app/src/main/AndroidManifest.xml')
+          content = path.read_text()
+          content = re.sub(r'android:label="[^"]+"', 'android:label="Sohbet Kutusu"', content, count=1)
+          path.write_text(content)
+          PYCODE
+      - name: Paketleri indir
+        run: flutter pub get
+      - name: Dart analiz
+        run: flutter analyze
+      - name: Testleri calistir
+        run: flutter test
+      - name: APK derle
+        run: flutter build apk --release
+      - name: APK dosyasini sun
+        uses: actions/upload-artifact@v4
+        with:
+          name: SohbetKutusu-V1-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
